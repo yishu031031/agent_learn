@@ -32,8 +32,7 @@ Hello_agents/
 ├── Chapter2/               # 本地模型
 │   └── llm_call.py
 └── Chapter3/               # ReAct 框架
-    ├── ReAct.py
-    └── tool/
+    ├── ReAct
 ```
 
 ## 安装和使用
