@@ -1,7 +1,7 @@
 import os
 import re
 # 假设 AgentLLM 在同级目录下，如果是文件夹里，请确保路径正确
-from Chapter3_ReAct.ReAct.llm_call import AgentLLM 
+from llm_call import AgentLLM 
 # 【修改点1】去掉相对导入的点
 from tool.tool_excute import ToolExecutor
 from tool.search_tool import search, __dec__ as search_description
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     # 2. 【修改点3】传入参数实例化 Agent
     agent = ReactAgent(llm_client=llm, tool_executor=executor)
     
-    query = "请介绍一下郧阳中学黎明校长，并告诉我一些他最近的情况"
+    query = "请告诉我英伟达目前最新的GPU型号，并告诉我它的价格"
     result = agent.run(query)
     
     if result:
