@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Hello Agents — Language Redirect</title>
+  <!-- Fallback: default to English if JS disabled -->
+  <meta http-equiv="refresh" content="0;url=./README.en.md">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;margin:2rem}
+    a{color:#0366d6}
+    .box{max-width:720px;margin:auto}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Hello Agents</h1>
+    <p>Redirecting you to the appropriate language README based on your browser language...</p>
+    <p>If the page does not redirect automatically, choose a language:</p>
+    <ul>
+      <li><a href="./README.zh-CN.md">中文 (简体)</a></li>
+      <li><a href="./README.en.md">English</a></li>
+    </ul>
+    <hr>
+    <p style="font-size:0.9em;color:#666">Note: JavaScript-based redirect prefers Chinese when your browser language starts with <code>zh</code>. If JavaScript is disabled, the page falls back to English.</p>
+  </div>
+
+  <script>
+    (function(){
+      try{
+        var lang = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+        if(lang.indexOf('zh') === 0){
+          window.location.href = './README.zh-CN.md';
+        } else {
+          window.location.href = './README.en.md';
+        }
+      }catch(e){
+        // ignore and allow meta refresh fallback
+        console.error('Redirect script error', e);
+      }
+    })();
+  </script>
+</body>
+</html>
