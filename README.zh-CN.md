@@ -1,3 +1,6 @@
+[🏠 Home](./README.md) | 🇬🇧 [English](./README.en.md)
+---
+
 <!-- 中文 README: 复制自原 README.md 中的中文部分 -->
 
 # Hello Agents（中文）

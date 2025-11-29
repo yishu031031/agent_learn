@@ -1,3 +1,20 @@
+## 中文版本
+# Hello Agents
+一个系统的 AI Agent 学习框架，涵盖从基础到高阶的多种 Agent 架构和实现方法。
+## 🎯 项目概述
+这个项目通过 5 个递进式章节，帮助开发者深入理解和实现现代 AI Agent 系统。从基础的 LLM 调用开始，逐步掌握 ReAct、Plan-and-Solve、Reflection 等核心范式。
+## 📚 章节内容
+﻿# Hello Agents
+
+请选择你要阅读的语言 / Please choose a language:
+
+- 🇨🇳 [中文 (简体)](./README.zh-CN.md)
+- 🇬🇧 [English](./README.en.md)
+
+> Tip: 在每个本地化文档顶部都有返回“Home”的链接。
+
+---
+
 ---
 
 # English Version
@@ -5,9 +22,6 @@
 # Hello Agents
 
 A systematic AI Agent learning framework covering multiple Agent architectures from basics to advanced implementations.
-
-[🏠 Home](./README.md) | 🇨🇳 [中文](./README.zh-CN.md)
----
 
 ## 🎯 Project Overview
 
