@@ -96,6 +96,17 @@ This project comprises 5 progressive chapters that help developers understand an
 
 ---
 
+### Chapter 4: Mainstream Agent Frameworks
+**Core Topics**: Transitioning from manual implementation to framework-based development
+- Advantages of frameworks: Code reuse, decoupling, state management, observability
+- Introduction to mainstream frameworks: AutoGen, AgentScope, CAMEL, LangGraph
+- **AutoGen Practice**: Multi-agent collaboration and automated task decomposition
+- **LangGraph Practice**: Building graph-based cyclic workflows
+
+**Code Path**: `Chapter4/`
+
+---
+
 ## 🛠️ Installation and Configuration
 
 ### 1. Create Conda Environment
