@@ -155,3 +155,143 @@ python team_workflow.py
 - **概率性输出**：LLM 本质上在“掷骰子”。未将 `temperature` 设为 0 时，每次回复都可能不同；即便设为 0，在复杂语境下也可能理解偏差。
 - **指令遵循有限**：System Prompt 并非万能。对话上下文过长或近期消息会导致模型“遗忘”角色（Recency Bias）。
 - **缺乏状态感知**：RoundRobin 机制无状态，只负责“轮流发言”，并不知道任务是否已经临近结束。
+
+
+## LangGraph框架
+
+### LangGraph 的结构梳理
+
+LangGraph 作为 LangChain 生态系统的重要扩展，代表了智能体框架设计的一个全新方向。
+
+LangGraph 将智能体的执行流程建模为一种状态机（State Machine），并将其表示为有向图（Directed Graph）。
+
+在这种范式中，图的节点（Nodes）代表一个具体的计算步骤（如调用 LLM、执行工具），而边（Edges）则定义了从一个节点到另一个节点的跳转逻辑。
+
+**基本构成要素**
+1. **全局状态(State)**
+   - 整个图的执行过程都围绕一个共享的状态对象进行。这个状态通常被定义为一个 Python 的 TypedDict，它可以包含任何你需要追踪的信息，如对话历史、中间结果、迭代次数等。所有的节点都能读取和更新这个中心状态。
+
+      ```python
+
+      from typing import TypedDict, List
+
+      # 定义全局状态的数据结构
+      class AgentState(TypedDict):
+         messages: List[str]      # 对话历史
+         current_task: str        # 当前任务
+         final_answer: str        # 最终答案
+         # ... 任何其他需要追踪的状态
+      ```
+
+2. **节点(Node)**
+   - 每个节点都是一个接收当前状态作为输入、并返回一个更新后的状态作为输出的 Python 函数。节点是执行具体工作的单元。
+
+      ```python
+         # 定义一个“规划者”节点函数
+         def planner_node(state: AgentState) -> AgentState:
+            """根据当前任务制定计划，并更新状态。"""
+            current_task = state["current_task"]
+            # ... 调用LLM生成计划 ...
+            plan = f"为任务 '{current_task}' 生成的计划..."
+            
+            # 将新消息追加到状态中
+            state["messages"].append(plan)
+            return state
+
+         # 定义一个“执行者”节点函数
+         def executor_node(state: AgentState) -> AgentState:
+            """执行最新计划，并更新状态。"""
+            latest_plan = state["messages"][-1]
+            # ... 执行计划并获得结果 ...
+            result = f"执行计划 '{latest_plan}' 的结果..."
+            
+            state["messages"].append(result)
+            return state
+      ```
+
+3. **边(Edges)**
+   - 边负责连接节点，定义工作流的方向。最简单的边是常规边，它指定了一个节点的输出总是流向另一个固定的节点。而 LangGraph 最强大的功能在于条件边（Conditional Edges）。它通过一个函数来判断当前的状态，然后动态地决定下一步应该跳转到哪个节点。这正是实现循环和复杂逻辑分支的关键。
+      ```python
+         def should_continue(state: AgentState) -> str:
+            """条件函数：根据状态决定下一步路由。"""
+            # 假设如果消息少于3条，则需要继续规划
+            if len(state["messages"]) < 3:
+               # 返回的字符串需要与添加条件边时定义的键匹配
+               return "continue_to_planner"
+            else:
+               state["final_answer"] = state["messages"][-1]
+               return "end_workflow"
+      ```
+
+### LangGraph组建
+
+**在定义了状态、节点和边之后，我们可以像搭积木一样将它们组装成一个可执行的工作流。**
+
+- 采用StateGraph构建有向图
+
+   ```python
+      from langgraph.graph import StateGraph, END
+   ```
+
+- 初始化一个状态图，并绑定我们定义的状态结构
+   
+   ```python
+      workflow = StateGraph(AgentState)
+   ```
+
+- 添加节点到图中——*add_node*
+   
+   ```python
+      workflow.add_node("planner", planner_node)
+      workflow.add_node("executor", executor_node)
+   ```
+
+- 设置图的入口点——*set_entry_point*
+   
+   ```python
+      workflow.set_entry_point("planner")
+   ```
+
+- 添加常规边，连接planner和excutor——*add_edge*
+  
+  ```python
+      workflow.add_edge("planner", "executor")
+  ```
+
+- 添加条件边，根据状态判断是否继续循环——*add_conditional_edges*
+  
+  ```python
+      workflow.add_conditional_edges(
+         "executor",
+         should_continue,
+         # 映射每个返回值到下一个节点
+         path_map={
+            "continue_to_planner": "planner",
+            "end_workflow": END
+         }
+      )
+  ```
+
+- 编译图
+   
+   ```python
+      app = workflow.compile()
+   ```
+
+- 运行图
+  
+  ```python
+      inputs = {"current_task": "分析最近的AI行业新闻", "messages": []}
+      for event in app.stream(inputs):
+         print(event)
+  ```
+
+## LangGraph实战
+
+在理解了 LangGraph 的核心概念之后，我们将通过一个实战案例来巩固所学。我们将构建一个简化的问答对话助手，它会遵循一个清晰、固定的三步流程来回答用户的问题：
+
+1. 理解 (Understand)：首先，分析用户的查询意图。
+2. 搜索 (Search)：然后，模拟搜索与意图相关的信息。
+3. 回答 (Answer)：最后，基于意图和搜索到的信息，生成最终答案。
+
+这个案例将清晰地展示如何定义状态、创建节点以及将它们线性地连接成一个完整的工作流。我们将代码分解为四个核心步骤：定义状态、创建节点、构建图、以及运行应用。

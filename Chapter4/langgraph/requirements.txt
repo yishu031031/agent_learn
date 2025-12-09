@@ -1,0 +1,17 @@
+# --- 核心框架 ---
+langgraph
+langchain
+langchain-core
+langchain-community
+
+# --- 模型接口 ---
+# 即使你用 DeepSeek 或 OpenRouter，也需要这个包
+langchain-openai
+
+
+# --- 常用工具 ---
+# Tavily 搜索 (LangGraph 官方教程最常用的搜索工具)
+tavily-python
+# DuckDuckGo 搜索 (免费的替代方案)
+duckduckgo-search
+grandalf
