@@ -434,3 +434,134 @@ tools = [
   }
 ]
 ```
+
+## 自定义工具开发
+
+有了基础设施后，我们来看看如何开发一个完整的自定义工具。数学计算工具是一个很好的例子，因为它简单直观，最直接的方式是使用ToolRegistry的函数注册功能。
+
+具体看 ``Chapter5/tool``
+
+## 多源搜索工具
+
+在实际应用中，我们经常需要整合多个外部服务来提供更强大的功能。搜索工具就是一个典型的例子，它整合多个搜索引擎，能提供更加完备的真实信息。在第一章我们使用过 Tavily 的搜索 API，在第四章我们使用过 SerpApi 的搜索 API。
+
+### 1. 搜索工具的统一接口设计
+
+HelloAgents 框架内置的 `SearchTool` 展示了如何设计一个高级的多源搜索工具：
+
+```python
+class SearchTool(Tool):
+    """
+    智能混合搜索工具
+
+    支持多种搜索引擎后端，智能选择最佳搜索源:
+    1. 混合模式 (hybrid) - 智能选择TAVILY或SERPAPI
+    2. Tavily API (tavily) - 专业AI搜索
+    3. SerpApi (serpapi) - 传统Google搜索
+    """
+
+    def __init__(self, backend: str = "hybrid", tavily_key: Optional[str] = None, serpapi_key: Optional[str] = None):
+        super().__init__(
+            name="search",
+            description="一个智能网页搜索引擎。支持混合搜索模式，自动选择最佳搜索源。"
+        )
+        self.backend = backend
+        self.tavily_key = tavily_key or os.getenv("TAVILY_API_KEY")
+        self.serpapi_key = serpapi_key or os.getenv("SEARCH_API_KEY")
+        self.available_backends = []      # 1. 初始化可用后端列表
+        self._setup_backends()            # 2. 设置和配置后端
+
+    def _setup_backends(self):
+        """检测并设置可用的搜索后端"""
+        
+        # 检测 Tavily 后端
+        if self.tavily_key:
+            try:
+                import tavily_python
+                self.available_backends.append("tavily")
+                print("✅ Tavily 后端可用")
+            except ImportError:
+                print("⚠️ Tavily 库未安装")
+        
+        # 检测 SerpApi 后端
+        if self.serpapi_key:
+            try:
+                from serpapi import GoogleSearch
+                self.available_backends.append("serpapi")
+                print("✅ SerpApi 后端可用")
+            except ImportError:
+                print("⚠️ SerpApi 库未安装")
+        
+        # 如果没有可用后端，报错
+        if not self.available_backends:
+            raise ValueError("没有可用的搜索后端，请配置至少一个 API 密钥")
+```
+
+这个设计的核心思想是根据可用的 API 密钥和依赖库，自动选择最佳的搜索后端。
+
+### 2. Tavily 与 SerpApi 搜索源的整合策略
+
+框架实现了智能的后端选择逻辑，通过降级机制确保高可用性：
+
+```python
+def _search_hybrid(self, query: str) -> str:
+    """混合搜索 - 智能选择最佳搜索源"""
+    # 优先使用Tavily（AI优化的搜索）
+    if "tavily" in self.available_backends:
+        try:
+            return self._search_tavily(query)
+        except Exception as e:
+            print(f"⚠️ Tavily搜索失败: {e}")
+            # 如果Tavily失败，尝试SerpApi
+            if "serpapi" in self.available_backends:
+                print("🔄 切换到SerpApi搜索")
+                return self._search_serpapi(query)
+
+    # 如果Tavily不可用，使用SerpApi
+    elif "serpapi" in self.available_backends:
+        try:
+            return self._search_serpapi(query)
+        except Exception as e:
+            print(f"⚠️ SerpApi搜索失败: {e}")
+
+    # 如果都不可用，提示用户配置API
+    return "❌ 没有可用的搜索源，请配置TAVILY_API_KEY或SERPAPI_API_KEY环境变量"
+```
+
+**设计优势：**
+
+- **降级机制**：从最优的搜索源逐步降级到可用的备选方案
+- **容错处理**：当某个搜索源失败时，自动切换到备用方案
+- **明确提示**：当所有搜索源都不可用时，明确提示用户配置正确的 API 密钥
+
+### 3. 搜索结果的统一格式化
+
+不同搜索引擎返回的结果格式不同，框架通过统一的格式化方法来处理：
+
+```python
+def _search_tavily(self, query: str) -> str:
+    """使用Tavily搜索"""
+    response = self.tavily_client.search(
+        query=query,
+        search_depth="basic",
+        include_answer=True,
+        max_results=3
+    )
+
+    result = f"🎯 Tavily AI搜索结果:{response.get('answer', '未找到直接答案')}\n\n"
+
+    for i, item in enumerate(response.get('results', [])[:3], 1):
+        result += f"[{i}] {item.get('title', '')}\n"
+        result += f"    {item.get('content', '')[:200]}...\n"
+        result += f"    来源: {item.get('url', '')}\n\n"
+
+    return result
+```
+
+**格式化要点：**
+
+- **统一输出格式**：无论使用哪个搜索后端，返回格式保持一致
+- **结构化展示**：包含标题、内容摘要、来源链接等信息
+- **内容截取**：限制内容长度，避免输出过长
+
+基于框架的设计思想，我们可以创建自己的高级搜索工具。

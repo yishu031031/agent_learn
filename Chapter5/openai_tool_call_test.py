@@ -78,19 +78,76 @@ try:
     )
     
     print("✅ API 调用成功!")
-    print("\n📋 响应内容:")
-    print(completion)
-    print(completion.choices[0].message.content)
+    
+    message = completion.choices[0].message
     
     # 检查是否有工具调用
-    if completion.choices[0].message.tool_calls:
-        print("\n🔧 检测到工具调用:")
-        for tool_call in completion.choices[0].message.tool_calls:
+    if message.tool_calls:
+        print("\n" + "="*70)
+        print("🔧 检测到工具调用（这是正常的！）")
+        print("="*70)
+        print("\n💡 为什么 content 为空？")
+        print("   当模型决定调用工具时，它不会生成文本内容，而是返回工具调用请求。")
+        print("   这是 OpenAI Function Calling 的正常行为。")
+        print()
+        print("📋 工具调用详情:")
+        for tool_call in message.tool_calls:
             print(f"  - 工具名称: {tool_call.function.name}")
             print(f"  - 参数: {tool_call.function.arguments}")
+            print(f"  - 调用ID: {tool_call.id}")
+        print()
+        
+        # 将助手的消息（包含工具调用）添加到消息历史
+        messages.append(message)
+        
+        # 模拟执行工具并返回结果
+        print("🔨 步骤3: 执行工具并获取结果...")
+        tool_results = []
+        for tool_call in message.tool_calls:
+            tool_name = tool_call.function.name
+            import json
+            tool_args = json.loads(tool_call.function.arguments)
+            
+            print(f"   执行工具: {tool_name}")
+            print(f"   参数: {tool_args}")
+            
+            # 模拟工具执行（实际应该调用真实的工具函数）
+            if tool_name == "get_current_weather":
+                location = tool_args.get("location", "未知")
+                unit = tool_args.get("unit", "celsius")
+                # 模拟天气数据
+                weather_result = f"波士顿今天天气晴朗，温度 22°{unit[0].upper()}"
+                tool_results.append({
+                    "tool_call_id": tool_call.id,
+                    "role": "tool",
+                    "name": tool_name,
+                    "content": weather_result
+                })
+                print(f"   结果: {weather_result}")
+        
+        # 将工具结果添加到消息历史
+        messages.extend(tool_results)
+        
+        # 再次调用 API，让模型基于工具结果生成最终答案
+        print("\n🔄 步骤4: 基于工具结果生成最终答案...")
+        final_completion = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            tools=tools,  # 仍然提供工具，但模型可能不再需要调用
+        )
+        
+        final_message = final_completion.choices[0].message
+        print("✅ 获得最终答案!")
+        print("\n" + "="*70)
+        print("💬 最终回复:")
+        print("="*70)
+        print(final_message.content)
+        print("="*70)
+        
     else:
-        print("\n💬 模型直接回复:")
-        print(completion.choices[0].message.content)
+        print("\n💬 模型直接回复（未使用工具）:")
+        print(message.content if message.content else "(空内容)")
+        
 
 except Exception as e:
     error_msg = str(e)
